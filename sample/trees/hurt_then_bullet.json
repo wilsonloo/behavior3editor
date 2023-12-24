@@ -1,0 +1,94 @@
+{
+  "name": "hurt_then_bullet",
+  "root": {
+    "id": 1,
+    "name": "Sequence",
+    "desc": "造成伤害后，溅射出子弹",
+    "args": {},
+    "children": [
+      {
+        "id": 2,
+        "name": "Sequence",
+        "desc": "先伤害主体敌人",
+        "args": {},
+        "children": [
+          {
+            "id": 3,
+            "name": "FindEnemy",
+            "args": {
+              "w": 10,
+              "h": 10,
+              "count": "1"
+            },
+            "output": [
+              "enemy"
+            ]
+          },
+          {
+            "id": 4,
+            "name": "CalcHurt",
+            "args": {
+              "float": 6
+            },
+            "output": [
+              "hurt"
+            ]
+          },
+          {
+            "id": 5,
+            "name": "DecHp"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "name": "Sequence",
+        "desc": "主体伤害成功后才进行溅射",
+        "args": {},
+        "children": [
+          {
+            "id": 7,
+            "name": "FindFriend",
+            "args": {
+              "w": 12,
+              "h": 12,
+              "count": "3",
+              "base": "enemy"
+            },
+            "output": [
+              "targets"
+            ]
+          },
+          {
+            "id": 8,
+            "name": "Foreach",
+            "args": {},
+            "input": [
+              "targets"
+            ],
+            "output": [
+              "target"
+            ],
+            "children": [
+              {
+                "id": 9,
+                "name": "Bullet",
+                "args": {
+                  "bullet_id": "7001",
+                  "x": 10,
+                  "y": 10,
+                  "speed": 4,
+                  "sub_hp": 998
+                },
+                "input": [
+                  "skill_releaser"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "desc": "溅射技能"
+}

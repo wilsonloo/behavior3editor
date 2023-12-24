@@ -62,9 +62,10 @@ export default class Workspace {
             return;
         }
 
-        const types: BehaviorNodeTypeModel[] = JSON.parse(
+        const cfg = JSON.parse(
             fs.readFileSync(this.nodeConfPath, "utf8")
         );
+        const types: BehaviorNodeTypeModel[] = cfg['list'];
         this.name2conf = {};
         types.forEach((t) => {
             this.name2conf[t.name] = t;

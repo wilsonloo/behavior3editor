@@ -1,0 +1,51 @@
+{
+  "name": "base_attack",
+  "root": {
+    "id": 1,
+    "name": "Selector",
+    "desc": "普通攻击技能",
+    "args": {},
+    "children": [
+      {
+        "id": 2,
+        "name": "Sequence",
+        "args": {},
+        "children": [
+          {
+            "id": 3,
+            "name": "FindEnemy",
+            "args": {
+              "count": "1"
+            },
+            "output": [
+              "targets"
+            ]
+          },
+          {
+            "id": 4,
+            "name": "CalcHurt",
+            "args": {
+              "float": 5
+            },
+            "input": [
+              "skill_releaser",
+              "target"
+            ],
+            "output": [
+              "hurt"
+            ]
+          },
+          {
+            "id": 5,
+            "name": "DecHp",
+            "args": {},
+            "input": [
+              "hurt"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "desc": "普通攻击技能"
+}

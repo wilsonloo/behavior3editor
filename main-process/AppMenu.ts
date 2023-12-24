@@ -8,6 +8,7 @@ import {
     MenuItemConstructorOptions,
 } from "electron";
 import * as fs from "fs";
+import * as Path from "path";
 import * as Utils from "../common/Utils";
 import MainEventType from "../common/MainEventType";
 import { MainProcess } from "./MainProcess";
@@ -30,15 +31,72 @@ export default class AppMenu {
 
     createMenu() {
         const menu: Menu = new Menu();
-        menu.append(this.createFileMenu());
+        menu.append(this.createStartMenu());
         menu.append(this.createEditMenu());
         menu.append(this.createNodeMenu());
-        menu.append(this.createWorkspaceMenu());
         menu.append(this.createToolsMenu());
         return menu;
     }
 
-    private createFileMenu() {
+    private createStartMenu() {
+        const recentItems: MenuItemConstructorOptions[] = [];
+        for (let path of this.settings.recentWorkspaces) {
+            recentItems.push({
+                label: path,
+                click: () => {
+                    console.log("open recent workspace", path);
+                    openWorkspace(path);
+                },
+            });
+        }
+        const openWorkspace = (path: string) => {
+            const curWorkspace = this.settings.curWorkspace;
+            curWorkspace.setFilepath(path);
+            curWorkspace.load();
+            this.settings.pushRecentWorkspace(path);
+            this.mainProcess.rebuildMenu();
+            this.webContents.send(
+                MainEventType.OPEN_DIR,
+                curWorkspace.getWorkdir(),
+                curWorkspace.getFilepath()
+            );
+        };
+        const saveToNewPath = (callback?: any) => {
+            (async () => {
+                const res = await dialog.showSaveDialog({
+                    properties: ["showOverwriteConfirmation"],
+                    filters: [{ name: "Json", extensions: ["json"] }],
+                });
+                if (!res.canceled) {
+                    this.settings.curWorkspace.setFilepath(res.filePath);
+                    this.settings.curWorkspace.save();
+                    openWorkspace(res.filePath);
+
+                    if(callback){
+                        callback();
+                    }
+                }
+            })();
+        };
+
+        const get_node_config_files = (folder: string): string[] => {
+            if (folder && folder != "" && fs.existsSync(folder)) {
+                const files = fs.readdirSync(folder).filter((f) => {
+                    return f.endsWith(".json");
+                });
+                console.debug("4444", files);
+                let list: string[] = [];
+                files.forEach((filename) => {
+                    const fullPath = Path.join(folder, filename);
+                    let node_cfg = JSON.parse(fs.readFileSync(fullPath, "utf8"));
+                    if(node_cfg['type'] == "node_config"){
+                        list.push(fullPath);
+                    }
+                })
+                return list;
+            }
+        }
+
         const fileItems: MenuItemConstructorOptions[] = [];
         for (let path of this.settings.recentFiles) {
             fileItems.push({
@@ -50,10 +108,129 @@ export default class AppMenu {
         }
 
         return new MenuItem({
-            label: "行为树",
+            label: "开始",
             submenu: [
                 {
-                    label: "新建",
+                    label: "打开项目",
+                    click: () => {
+                        (async () => {
+                            const res = await dialog.showOpenDialog({
+                                properties: ["openFile"],
+                                filters: [{ name: "Json", extensions: ["json"] }],
+                            });
+                            if (res.filePaths.length > 0) {
+                                let workspaceDirPath = res.filePaths[0];
+                                openWorkspace(workspaceDirPath);
+                                this.webContents.send(
+                                    MainEventType.OPEN_DIR,
+                                    workspaceDirPath,
+                                    this.settings.curWorkspace.getFilepath()
+                                );
+                            }
+                        })();
+                    },
+                },
+                {
+                    label: "新建项目",
+                    click: () => {
+                        saveToNewPath(()=>{
+                            let workspaceFilename = this.settings.curWorkspace.getFilepath();
+                            let workspaceDirPath = Path.dirname(workspaceFilename);
+                            let node_config_files = get_node_config_files(workspaceDirPath);
+                            let node_config_file: string
+                            if(node_config_files.length > 1){
+                                node_config_file = node_config_files[0];
+                                dialog.showMessageBox({
+                                    type: "提示",
+                                    buttons: ["ok"],
+                                    message: "多个node-config,采用:"+node_config_file
+                                });
+                            }else if(node_config_files.length == 1) {
+                                node_config_file = node_config_files[0];
+
+                            }else if(node_config_files.length == 0){
+                                node_config_file = Path.join(workspaceDirPath, "node_config.json");
+                                let content = '{"type":"node_config", "list":[]}'
+                                fs.writeFileSync(node_config_file, content, {
+                                    flag: 'w',
+                                })
+                                console.log("default node config saved to ", node_config_file);
+                            }
+
+                            this.settings.curWorkspace.setWorkdir(workspaceDirPath);
+                            this.settings.curWorkspace.setNodeConfPath(node_config_file);
+                            this.settings.curWorkspace.save();
+                            this.mainProcess.rebuildMenu();
+                            this.settings.curWorkspace.save();
+                            this.webContents.send(
+                                MainEventType.OPEN_DIR,
+                                workspaceDirPath,
+                                this.settings.curWorkspace.getFilepath()
+                            );
+                        })
+                    },
+                },
+                {
+                    label: "保存项目",
+                    click: () => {
+                        if (this.settings.curWorkspace.getFilepath()) {
+                            console.debug("saving cur:", this.settings.curWorkspace.getFilepath())
+                            this.settings.curWorkspace.save();
+                        } else {
+                            console.debug("saving new")
+                            saveToNewPath();
+                        }
+                    },
+                },
+                {
+                    label: "项目另存为",
+                    click: () => {
+                        saveToNewPath();
+                    },
+                },
+                {
+                    label: "刷新项目",
+                    accelerator: "F5",
+                    click: () => {
+                        console.log("reload workspace");
+                        openWorkspace(this.settings.curWorkspace.getFilepath());
+                    },
+                },
+                {
+                    label: "最近打开",
+                    submenu: recentItems,
+                },
+                { type: "separator" },
+                
+                // 以下为 行为树 相关##############################
+                {
+                    label: "打开行为树目录",
+                    accelerator: "Ctrl+Shift+O",
+                    click: () => {
+                        if (!this.settings.curWorkspace.getNodeConfPath()) {
+                            dialog.showErrorBox("警告", "请先指定节点定义配置!");
+                            return;
+                        }
+                        (async () => {
+                            const res = await dialog.showOpenDialog({
+                                properties: ["openDirectory"],
+                            });
+                            if (res.filePaths.length > 0) {
+                                const curWorkspace = this.settings.curWorkspace;
+                                const path = res.filePaths[0];
+                                curWorkspace.setWorkdir(path);
+                                curWorkspace.save();
+                                this.webContents.send(
+                                    MainEventType.OPEN_DIR,
+                                    path,
+                                    curWorkspace.getFilepath()
+                                );
+                            }
+                        })();
+                    },
+                },
+                {
+                    label: "新建行为树",
                     accelerator: "ctrl+n",
                     click: () => {
                         (async () => {
@@ -73,7 +250,7 @@ export default class AppMenu {
                     },
                 },
                 {
-                    label: "打开文件",
+                    label: "打开行为树",
                     accelerator: "Ctrl+O",
                     click: () => {
                         (async () => {
@@ -93,22 +270,19 @@ export default class AppMenu {
                         })();
                     },
                 },
-                { type: "separator" },
                 {
                     label: "最近打开",
                     submenu: fileItems,
                 },
-
-                { type: "separator" },
                 {
-                    label: "保存",
+                    label: "保存行为树",
                     accelerator: "ctrl+s",
                     click: () => {
                         this.webContents.send(MainEventType.SAVE);
                     },
                 },
                 {
-                    label: "全部保存",
+                    label: "全部保存行为树",
                     accelerator: "ctrl+shift+s",
                     click: () => {
                         this.webContents.send(MainEventType.SAVE_ALL);
@@ -134,6 +308,13 @@ export default class AppMenu {
                                 });
                             }
                         })();
+                    },
+                },
+                { type: "separator" },
+                {
+                    label: "关闭",
+                    click: () => {
+                        app.quit();
                     },
                 },
             ],
@@ -191,148 +372,6 @@ export default class AppMenu {
                 },
             ]
         })
-    }
-
-    private createWorkspaceMenu() {
-        const openWorkspace = (path: string) => {
-            const curWorkspace = this.settings.curWorkspace;
-            curWorkspace.setFilepath(path);
-            curWorkspace.load();
-            this.settings.pushRecentWorkspace(path);
-            this.mainProcess.rebuildMenu();
-            this.webContents.send(
-                MainEventType.OPEN_DIR,
-                curWorkspace.getWorkdir(),
-                curWorkspace.getFilepath()
-            );
-        };
-        const saveToNewPath = () => {
-            (async () => {
-                const res = await dialog.showSaveDialog({
-                    properties: ["showOverwriteConfirmation"],
-                    filters: [{ name: "Json", extensions: ["json"] }],
-                });
-                if (!res.canceled) {
-                    this.settings.curWorkspace.setFilepath(res.filePath);
-                    this.settings.curWorkspace.save();
-                    openWorkspace(res.filePath);
-                }
-            })();
-        };
-        const recentItems: MenuItemConstructorOptions[] = [];
-        for (let path of this.settings.recentWorkspaces) {
-            recentItems.push({
-                label: path,
-                click: () => {
-                    console.log("open recent workspace", path);
-                    openWorkspace(path);
-                },
-            });
-        }
-        return new MenuItem({
-            label: "工作区",
-            submenu: [
-                {
-                    label: "打开",
-                    click: () => {
-                        (async () => {
-                            const res = await dialog.showOpenDialog({
-                                properties: ["openFile"],
-                                filters: [{ name: "Json", extensions: ["json"] }],
-                            });
-                            if (res.filePaths.length > 0) {
-                                openWorkspace(res.filePaths[0]);
-                            }
-                        })();
-                    },
-                },
-                {
-                    label: "保存",
-                    click: () => {
-                        if (this.settings.curWorkspace.getFilepath()) {
-                            this.settings.curWorkspace.save();
-                        } else {
-                            saveToNewPath();
-                        }
-                    },
-                },
-                {
-                    label: "另存为",
-                    click: () => {
-                        saveToNewPath();
-                    },
-                },
-                {
-                    label: "刷新",
-                    accelerator: "F5",
-                    click: () => {
-                        console.log("reload workspace");
-                        openWorkspace(this.settings.curWorkspace.getFilepath());
-                    },
-                },
-                {
-                    label: "最近打开",
-                    submenu: recentItems,
-                },
-                { type: "separator" },
-                {
-                    label: "打开目录",
-                    accelerator: "Ctrl+Shift+O",
-                    click: () => {
-                        if (!this.settings.curWorkspace.getNodeConfPath()) {
-                            dialog.showErrorBox("警告", "请先指定节点定义配置!");
-                            return;
-                        }
-                        (async () => {
-                            const res = await dialog.showOpenDialog({
-                                properties: ["openDirectory"],
-                            });
-                            if (res.filePaths.length > 0) {
-                                const curWorkspace = this.settings.curWorkspace;
-                                const path = res.filePaths[0];
-                                curWorkspace.setWorkdir(path);
-                                curWorkspace.save();
-                                this.webContents.send(
-                                    MainEventType.OPEN_DIR,
-                                    path,
-                                    curWorkspace.getFilepath()
-                                );
-                            }
-                        })();
-                    },
-                },
-                {
-                    label: "节点定义",
-                    submenu: [
-                        {
-                            label: "选择文件",
-                            click: () => {
-                                (async () => {
-                                    const res = await dialog.showOpenDialog({
-                                        properties: ["openFile"],
-                                        filters: [{ name: "Json", extensions: ["json"] }],
-                                    });
-                                    if (res.filePaths.length > 0) {
-                                        const nodeConfigPath = res.filePaths[0];
-                                        this.settings.curWorkspace.setNodeConfPath(nodeConfigPath);
-                                        this.mainProcess.rebuildMenu();
-                                    }
-                                })();
-                            },
-                        },
-                        { type: "separator" },
-                        { label: this.settings.nodeConfPath },
-                    ],
-                },
-                { type: "separator" },
-                {
-                    label: "关闭",
-                    click: () => {
-                        app.quit();
-                    },
-                },
-            ],
-        });
     }
 
     private createToolsMenu() {

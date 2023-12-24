@@ -1,0 +1,51 @@
+{
+  "name": "bullet_7001",
+  "root": {
+    "id": 1,
+    "name": "Sequence",
+    "desc": "新建行为树",
+    "children": [
+      {
+        "id": 2,
+        "name": "FindEnemy",
+        "args": {
+          "x": null,
+          "w": 1,
+          "h": 1,
+          "count": "1",
+          "base": "source"
+        },
+        "output": [
+          "targets"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "GetHp",
+        "args": {},
+        "output": [
+          "hp"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "Cmp",
+        "args": {
+          "gt": 0
+        },
+        "input": [
+          "hp"
+        ]
+      },
+      {
+        "id": 5,
+        "name": "DecHp",
+        "args": {},
+        "input": [
+          "sub_hp"
+        ]
+      }
+    ]
+  },
+  "desc": "子弹效果"
+}

@@ -1,0 +1,41 @@
+{
+  "name": "cure_friends",
+  "root": {
+    "id": 1,
+    "name": "Sequence",
+    "desc": "新建行为树",
+    "children": [
+      {
+        "id": 2,
+        "name": "FindFriend",
+        "args": {
+          "w": 10,
+          "h": 10,
+          "count": "5"
+        },
+        "output": [
+          "friends"
+        ]
+      },
+      {
+        "id": 3,
+        "name": "CalcCure",
+        "args": {
+          "float": 5
+        },
+        "output": [
+          "cure"
+        ]
+      },
+      {
+        "id": 4,
+        "name": "AddHp",
+        "args": {},
+        "input": [
+          "cure"
+        ]
+      }
+    ]
+  },
+  "desc": "治疗技能"
+}

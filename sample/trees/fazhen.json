@@ -1,0 +1,98 @@
+{
+  "name": "fazhen",
+  "root": {
+    "id": 1,
+    "name": "Sequence",
+    "desc": "治疗与伤害同时进行",
+    "args": {},
+    "children": [
+      {
+        "id": 2,
+        "name": "Wait"
+      },
+      {
+        "id": 3,
+        "name": "Parallel",
+        "desc": "同时并行执行",
+        "args": {},
+        "children": [
+          {
+            "id": 4,
+            "name": "Sequence",
+            "desc": "给友方治疗",
+            "args": {},
+            "children": [
+              {
+                "id": 5,
+                "name": "FindFriend",
+                "args": {
+                  "w": 10,
+                  "h": 10,
+                  "count": "5"
+                },
+                "output": [
+                  "targets"
+                ]
+              },
+              {
+                "id": 6,
+                "name": "CalcCure",
+                "args": {
+                  "float": 5
+                },
+                "output": [
+                  "cure"
+                ]
+              },
+              {
+                "id": 7,
+                "name": "AddHp",
+                "args": {},
+                "input": [
+                  "cure"
+                ]
+              }
+            ]
+          },
+          {
+            "id": 8,
+            "name": "Sequence",
+            "children": [
+              {
+                "id": 9,
+                "name": "FindEnemy",
+                "args": {
+                  "w": 10,
+                  "h": 10,
+                  "count": "5"
+                },
+                "output": [
+                  "targets"
+                ]
+              },
+              {
+                "id": 10,
+                "name": "CalcHurt",
+                "args": {
+                  "float": 5
+                },
+                "output": [
+                  "hurt"
+                ]
+              },
+              {
+                "id": 11,
+                "name": "DecHp",
+                "args": {},
+                "input": [
+                  "hurt"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "desc": "治疗伤害法阵技能"
+}

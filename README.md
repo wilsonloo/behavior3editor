@@ -4,18 +4,31 @@
 
 ## 使用方法
 + 打开编辑器
-+ 工作区->节点定义->选择文件(json)
-+ 工作区->选择目录(指定行为树所在的目录)
-+ 工作区->另存为(将工作区保存起来，以便下次打开)
-+ 行为树->新建
++ 开始 -> 打开或新建项目
+  * 项目根目录必须包含节点 json文件，json文件根节点必须含两个字段：
+    * "type":"node_config" # 表示该json文件为 行为树各类型node 的配置文件
+    * "list": [] # 表示具体的各类行为树节点名
+  ```json
+  {
+    "type":"node_config",
+    "list":[ 
+      {"name":"AlwaysFail",...}, 
+      {"name":"AlwaysSuccess",...},
+      ...
+    ]
+  }
+  ```
++ [ 可选：开始 -> 打开行为树目录 ]
+  * 用来存储行为树的目录，默认为项目根目录
++ 开始 -> 新建行为树
 
 ## 示例项目
-+ 工作区: sample/workspace.json
++ 项目: sample/project.json
 + 节点定义: sample/node-config.json
-+ 行为树目录: sample/workdir
++ 行为树目录: sample/trees
 + 批处理脚本: sample/scripts
 
-Tips: workspace.json也可以手动编辑,加上isRelative可以让配置中的路径变成相对路径，这样就不需要团队中每个人在使用前都必须先创建工作区
+Tips: project.json也可以手动编辑,加上isRelative可以让配置中的路径变成相对路径，这样就不需要团队中每个人在使用前都必须先创建工作区
 
 ## 节点定义
 ```typescript
@@ -37,9 +50,12 @@ interface BehaviorNodeTypeModel {
 节点定义也是json格式，参照[sample/node-config.json](sample/node-config.json)，编辑器不提供节点定义的编辑，强烈建议节点定义文件由代码生成 (参照示例项目[behavior3lua](https://github.com/zhandouxiaojiji/behavior3lua))。
 
 ## 编译与构建
+* 注：目前只能支持到node.js v16+ 版本，v17及以上版本在运行 `npm start` 会出现 `ERR_OSSL_EVP_UNSUPPORTED` 报错
 ```shell
 npm install # 安装依赖
-npm start # 运行测试
+npm start # 运行测试， 如果出现 `ERR_OSSL_EVP_UNSUPPORTED`, 
+  # windows下输入 $env:NODE_OPTIONS="--openssl-legacy-provider"  
+  #          或者 set NODE_OPTIONS=--openssl-legacy-provider， 
 npm run dist # 编译exe可执行文件
 ```
 
